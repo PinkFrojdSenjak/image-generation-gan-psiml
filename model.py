@@ -10,18 +10,20 @@ from spectral import SpectralNorm
 from custom_layers import EqualizedLinear
 
 
-class Self_Attn_No_Residual(nn.Module):
+class Self_Attn_Base(nn.Module):
     """ Self attention Layer"""
     def __init__(self,in_dim,activation):
-        super(Self_Attn_No_Residual,self).__init__()
+        super(Self_Attn_Base,self).__init__()
         self.chanel_in = in_dim
         self.activation = activation
         
         self.query_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim//8 , kernel_size= 1)
         self.key_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim//8 , kernel_size= 1)
         self.value_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim , kernel_size= 1)
+        self.gamma = nn.Parameter(torch.zeros(1))
 
         self.softmax  = nn.Softmax(dim=-1) #
+
     def forward(self,x):
         """
             inputs :
@@ -39,7 +41,7 @@ class Self_Attn_No_Residual(nn.Module):
 
         out = torch.bmm(proj_value,attention.permute(0,2,1) )
         out = out.view(m_batchsize,C,width,height)
-        
+        out = self.gamma*out + x
         return out,attention
 
 
@@ -50,7 +52,13 @@ class Self_Attn_Generator(nn.Module):
         self.chanel_in = attention_dim
         self.activation = activation
 
-        self.attn_no_res = Self_Attn_No_Residual(attention_dim, activation)
+        self.attn_base = Self_Attn_Base(attention_dim, activation)
+
+        self.sigma = 0
+
+    def update_sigma(self, sigma):
+        assert sigma >= 0 and sigma <= 1 , "Sigma must be between 0 and 1"
+        self.sigma = sigma
 
     def forward(self,x):
       
@@ -58,7 +66,7 @@ class Self_Attn_Generator(nn.Module):
         out, attention = self.attn_no_res(out)
         
         out = out.permute(0,2,1,3)
-        out = out + x
+        out = self.sigma * out + (1 - self.sigma) * x 
         return out, attention
 
 
@@ -74,6 +82,15 @@ class Self_Attn_Discriminator(nn.Module):
         self.value_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim , kernel_size= 1)
 
         self.softmax  = nn.Softmax(dim=-1) #
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        self.sigma = 0
+
+
+    def update_sigma(self, sigma):
+        assert sigma >= 0 and sigma <= 1 , "Sigma must be between 0 and 1"
+        self.sigma = sigma
+
     def forward(self,x):
         """
             inputs :
@@ -92,7 +109,8 @@ class Self_Attn_Discriminator(nn.Module):
         out = torch.bmm(proj_value,attention.permute(0,2,1) )
         out = out.view(m_batchsize,C,width,height)
         
-        out = out + x
+        out = self.gamma*out + x
+        out = self.sigma * out + (1 - self.sigma) * x
         return out,attention
 
 

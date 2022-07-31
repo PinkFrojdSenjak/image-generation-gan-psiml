@@ -48,6 +48,9 @@ class Trainer(object):
         self.log_step = config.log_step
         self.sample_step = config.sample_step
         self.model_save_step = config.model_save_step
+        self.sigma_update_step = config.sigma_update_step
+        self.sigma_update_freq = config.sigma_update_freq
+
         self.version = config.version
         self.use_gpu = config.use_gpu
 
@@ -199,10 +202,11 @@ class Trainer(object):
                 elapsed = time.time() - start_time
                 elapsed = str(datetime.timedelta(seconds=elapsed))
                 print("Elapsed [{}], G_step [{}/{}], D_step[{}/{}], d_out_real: {:.4f}, "
-                      " ave_gamma_l3: {:.4f}, ave_gamma_l4: {:.4f}".
+                      " ave_gamma_l3: {:.4f}".
                       format(elapsed, step + 1, self.total_step, (step + 1),
                              self.total_step , d_loss_real.data[0],
-                             self.G.attn1.gamma.mean().data[0], self.G.attn2.gamma.mean().data[0] ))
+                             self.G.attn.attn_base.gamma.mean().data[0]))
+               
 
             # Sample images
             if (step + 1) % self.sample_step == 0:
