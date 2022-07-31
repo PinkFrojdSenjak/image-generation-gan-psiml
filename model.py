@@ -57,13 +57,14 @@ class Self_Attn_Generator(nn.Module):
         self.sigma = 0
 
     def update_sigma(self, sigma):
-        assert sigma >= 0 and sigma <= 1 , "Sigma must be between 0 and 1"
+        if sigma > 1:
+            sigma = 1
         self.sigma = sigma
 
     def forward(self,x):
       
         out = x.permute(0,2,1,3)
-        out, attention = self.attn_no_res(out)
+        out, attention = self.attn_base(out)
         
         out = out.permute(0,2,1,3)
         out = self.sigma * out + (1 - self.sigma) * x 
@@ -88,7 +89,8 @@ class Self_Attn_Discriminator(nn.Module):
 
 
     def update_sigma(self, sigma):
-        assert sigma >= 0 and sigma <= 1 , "Sigma must be between 0 and 1"
+        if sigma > 1:
+            sigma = 1
         self.sigma = sigma
 
     def forward(self,x):

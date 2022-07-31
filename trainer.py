@@ -49,7 +49,7 @@ class Trainer(object):
         self.sample_step = config.sample_step
         self.model_save_step = config.model_save_step
         self.sigma_update_step = config.sigma_update_step
-        self.sigma_update_freq = config.sigma_update_freq
+        self.sigma_update_delta = config.sigma_update_delta
 
         self.version = config.version
         self.use_gpu = config.use_gpu
@@ -206,6 +206,13 @@ class Trainer(object):
                       format(elapsed, step + 1, self.total_step, (step + 1),
                              self.total_step , d_loss_real.data[0],
                              self.G.attn.attn_base.gamma.mean().data[0]))
+
+            # Update sigma of attention layers
+            if (step + 1) % self.sigma_update_step == 0:
+                self.G.attn.update_sigma(self.G.attn.sigma + self.sigma_update_delta)
+                self.D.attn.update_sigma(self.D.attn.sigma + self.sigma_update_delta)
+                print('Updated sigma to {}'.format(self.G.attn.sigma))
+
                
 
             # Sample images
