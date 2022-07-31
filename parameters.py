@@ -33,7 +33,7 @@ def get_parameters():
     parser.add_argument('--log_step', type=int, default=10)
     parser.add_argument('--sample_step', type=int, default=10)
     parser.add_argument('--model_save_step', type=int, default=10)
-    parser.add_argument('--sigma-update-step', type=int, default=100)
+    parser.add_argument('--sigma-update-step', type=int, default=10)
     parser.add_argument('--sigma-update-delta', type=int, default=0.01)
 
     # using pretrained

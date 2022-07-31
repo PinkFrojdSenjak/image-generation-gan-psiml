@@ -204,8 +204,8 @@ class Trainer(object):
                 print("Elapsed [{}], G_step [{}/{}], D_step[{}/{}], d_out_real: {:.4f}, "
                       " ave_gamma_l3: {:.4f}".
                       format(elapsed, step + 1, self.total_step, (step + 1),
-                             self.total_step , d_loss_real.data[0],
-                             self.G.attn.attn_base.gamma.mean().data[0]))
+                             self.total_step , d_loss_real.data.item(),
+                             self.G.attn.attn_base.gamma.mean().data.item()))
 
             # Update sigma of attention layers
             if (step + 1) % self.sigma_update_step == 0:
@@ -217,7 +217,7 @@ class Trainer(object):
 
             # Sample images
             if (step + 1) % self.sample_step == 0:
-                fake_images,_,_= self.G(fixed_z)
+                fake_images,_= self.G(fixed_z)
                 save_image(denorm(fake_images.data),
                            os.path.join(self.sample_path, '{}_fake.png'.format(step + 1)))
 
