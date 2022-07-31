@@ -139,7 +139,7 @@ class Trainer(object):
            
             z = tensor2var(torch.randn(real_images.size(0), self.z_dim))
             fake_images, gf = self.G(z)
-            d_out_fake,df1,df2 = self.D(fake_images)
+            d_out_fake,df, = self.D(fake_images)
 
             d_loss_fake = d_out_fake.mean()
 
@@ -150,13 +150,19 @@ class Trainer(object):
             self.d_optimizer.step()
 
             # Compute gradient penalty
-            alpha = torch.rand(real_images.size(0), 1, 1, 1).cuda().expand_as(real_images)
+            alpha = torch.rand(real_images.size(0), 1, 1, 1)
+            if self.use_gpu:
+                alpha = alpha.cuda()
+            alpha = alpha.expand_as(real_images)
             interpolated = Variable(alpha * real_images.data + (1 - alpha) * fake_images.data, requires_grad=True)
-            out,_,_ = self.D(interpolated)
+            out,_ = self.D(interpolated)
 
+            grad_outputs = torch.ones(out.size())
+            if self.use_gpu:
+                grad_outputs = grad_outputs.cuda()
             grad = torch.autograd.grad(outputs=out,
                                         inputs=interpolated,
-                                        grad_outputs=torch.ones(out.size()).cuda(),
+                                        grad_outputs=grad_outputs,
                                         retain_graph=True,
                                         create_graph=True,
                                         only_inputs=True)[0]
@@ -176,10 +182,10 @@ class Trainer(object):
 
              # Create random noise
             z = tensor2var(torch.randn(real_images.size(0), self.z_dim))
-            fake_images,_,_ = self.G(z)
+            fake_images,_ = self.G(z)
 
             # Compute loss with fake images
-            g_out_fake,_,_ = self.D(fake_images)  # batch x n
+            g_out_fake,_ = self.D(fake_images)  # batch x n
            
             g_loss_fake = - g_out_fake.mean()
 
