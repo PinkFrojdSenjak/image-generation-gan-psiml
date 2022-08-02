@@ -106,7 +106,7 @@ class Trainer(object):
 
         data_iter = iter(self.data_loader)
         step_per_epoch = len(self.data_loader)
-        model_save_step = model_save_step #int(self.model_save_step * step_per_epoch)
+        model_save_step = self.model_save_step #int(self.model_save_step * step_per_epoch)
 
         # Fixed input for debugging
         fixed_z = tensor2var(torch.randn(self.batch_size, self.z_dim))
@@ -159,7 +159,7 @@ class Trainer(object):
             out,_ = self.D(interpolated)
 
             grad_outputs = torch.ones(out.size()).to(self.device)
-            
+
             grad = torch.autograd.grad(outputs=out,
                                         inputs=interpolated,
                                         grad_outputs=grad_outputs,
