@@ -133,6 +133,8 @@ class Trainer(object):
                 real_images = next(data_iter) #real_images, _ = next(data_iter)
             
             real_images = tensor2var(real_images)
+            if self.use_gpu:
+                real_images = real_images.cuda()
 
              # Compute loss with real images
             # dr1, dr2, df1, df2, gf1, gf2 are attention scores
