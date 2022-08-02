@@ -60,6 +60,7 @@ class Trainer(object):
         self.log_path = os.path.join(config.log_path, self.version)
         self.sample_path = os.path.join(config.sample_path, self.version)
         self.model_save_path = os.path.join(config.model_save_path, self.version)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.build_model()
 
@@ -74,12 +75,10 @@ class Trainer(object):
         #self.G = Generator(self.batch_size,self.imsize, self.z_dim, self.g_conv_dim).cuda()
         #self.D = Discriminator(self.batch_size,self.imsize, self.d_conv_dim).cuda()
         self.G = Generator(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
-        if self.use_gpu:
-            self.G.cuda()
+        self.G.to(self.device)
 
         self.D = Discriminator(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
-        if self.use_gpu:
-            self.D.cuda()
+        self.D.to(self.device)
 
         self.g_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.G.parameters()), self.g_lr, [self.beta1, self.beta2])
         self.d_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.D.parameters()), self.d_lr, [self.beta1, self.beta2])
@@ -132,9 +131,7 @@ class Trainer(object):
                 data_iter = iter(self.data_loader)
                 real_images = next(data_iter) #real_images, _ = next(data_iter)
             
-            real_images = tensor2var(real_images)
-            if self.use_gpu:
-                real_images = real_images.cuda()
+            real_images = tensor2var(real_images).to(self.device)
 
              # Compute loss with real images
             # dr1, dr2, df1, df2, gf1, gf2 are attention scores
@@ -155,16 +152,14 @@ class Trainer(object):
             self.d_optimizer.step()
 
             # Compute gradient penalty
-            alpha = torch.rand(real_images.size(0), 1, 1, 1)
-            if self.use_gpu:
-                alpha = alpha.cuda()
+            alpha = torch.rand(real_images.size(0), 1, 1, 1).to(self.device)
+            
             alpha = alpha.expand_as(real_images)
             interpolated = Variable(alpha * real_images.data + (1 - alpha) * fake_images.data, requires_grad=True)
             out,_ = self.D(interpolated)
 
-            grad_outputs = torch.ones(out.size())
-            if self.use_gpu:
-                grad_outputs = grad_outputs.cuda()
+            grad_outputs = torch.ones(out.size()).to(self.device)
+            
             grad = torch.autograd.grad(outputs=out,
                                         inputs=interpolated,
                                         grad_outputs=grad_outputs,
