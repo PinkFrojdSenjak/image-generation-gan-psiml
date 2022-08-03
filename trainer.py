@@ -9,6 +9,7 @@ from torchvision.utils import save_image
 
 from model import Generator, Discriminator
 from utils import *
+import wandb
 
 
 class Trainer(object):
@@ -63,6 +64,18 @@ class Trainer(object):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.build_model()
+        wandb.init(entity = 'wandb', project = 'image-generation-gan')
+        wandb.watch_called = False
+
+        wconfig = wandb.config          # Initialize config
+        wconfig.batch_size = 32          # input batch size for training (default: 64)
+        wconfig.test_batch_size = 10    # input batch size for testing (default: 1000)
+        wconfig.epochs = 50             # number of epochs to train (default: 10)
+        wconfig.lr = 0.1               # learning rate (default: 0.01)
+        wconfig.momentum = 0.1          # SGD momentum (default: 0.5) 
+        wconfig.no_cuda = False         # disables CUDA training
+        wconfig.seed = 42               # random seed (default: 42)
+        wconfig.log_interval = 10 
 
         if self.use_tensorboard:
             self.build_tensorboard()
@@ -103,6 +116,10 @@ class Trainer(object):
 
 
     def train(self):
+
+        wandb.watch(self.G, log="all")
+        wandb.watch(self.D, log="all")
+
 
         data_iter = iter(self.data_loader)
         step_per_epoch = len(self.data_loader)
