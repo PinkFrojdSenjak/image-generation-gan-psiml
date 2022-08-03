@@ -29,10 +29,8 @@ def main(config):
                        pretrained=True, useGPU=True)
 
     if config.train:
-        if config.model=='psagan':
-            trainer = Trainer(data_loader, config, pretrained_model)
-        else:
-            raise NotImplementedError
+        trainer = Trainer(data_loader, config, pretrained_model)
+
         trainer.train()
     else:
         pass

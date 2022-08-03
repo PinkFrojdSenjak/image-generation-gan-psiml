@@ -193,16 +193,17 @@ class DCGenerator(nn.Module):
         )
 
         self.attn = Self_Attn_Generator(16, 'relu')
-        self.toRGB = nn.Conv2d(16, 3, 4, 2, 1, bias=False)
+        self.toRGB = nn.ConvTranspose2d(16, 3, 4, 2, 1, bias=False)
         # 3 x 128 x 128
         self.tanh = nn.Tanh()
 
-    def forward(self, x):
-        x = self.main(x)
-        x, attn = self.attn(x)
+    def forward(self, z):
+        z = z.view(z.size(0), z.size(1), 1, 1)
+        x = self.main(z)
+        #x, attn = self.attn(x)
         x = self.toRGB(x)
         x = self.tanh(x)
-        return x, attn
+        return x#, attn
 
 class DCDiscriminator(nn.Module):
     def __init__(self, z_dim = 512, ndf = 64) -> None:
@@ -232,7 +233,7 @@ class DCDiscriminator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
 
             # state size. (ndf*16) x 4 x 4
-            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False)
+            nn.Conv2d(ndf * 16, 1, 4, 1, 0, bias=False)
             )
     def forward(self, x):
         x = self.main(x)

@@ -6,6 +6,7 @@ import datetime
 import torch.nn as nn
 from torch.autograd import Variable
 from torchvision.utils import save_image
+from torch.nn import functional as F
 
 from model import Generator, Discriminator, DCGenerator, DCDiscriminator
 from utils import *
@@ -84,12 +85,11 @@ class Trainer(object):
             self.load_pretrained_model()
 
     def build_model(self):
-        #self.G = Generator(self.batch_size,self.imsize, self.z_dim, self.g_conv_dim).cuda()
-        #self.D = Discriminator(self.batch_size,self.imsize, self.d_conv_dim).cuda()
-        self.G = DCGenerator(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
+
+        self.G = DCGenerator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.G.to(self.device)
 
-        self.D = DCDiscriminator(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
+        self.D = DCDiscriminator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.D.to(self.device)
 
         self.g_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.G.parameters()), self.g_lr, [self.beta1, self.beta2])
@@ -159,7 +159,13 @@ class Trainer(object):
             d_loss_real = - torch.mean(d_out_real)
            
             z = tensor2var(torch.randn(real_images.size(0), self.z_dim))
-            fake_images, gf = self.G(z)
+            if self.model != 'dcgan':
+                fake_images, gf = self.G(z)
+                gf = gf.unsqueeze(1)
+            else:
+                fake_images = self.G(z)
+                
+
             d_out_fake = self.D(fake_images)
 
             d_loss_fake = d_out_fake.mean()
@@ -202,7 +208,10 @@ class Trainer(object):
 
              # Create random noise
             z = tensor2var(torch.randn(real_images.size(0), self.z_dim))
-            fake_images,_ = self.G(z)
+            if self.model != 'dcgan':
+                fake_images,_ = self.G(z)
+            else:
+                fake_images = self.G(z)
 
             # Compute loss with fake images
             g_out_fake = self.D(fake_images)  # batch x n
@@ -224,34 +233,40 @@ class Trainer(object):
             if (step + 1) % self.log_step == 0:
                 elapsed = time.time() - start_time
                 elapsed = str(datetime.timedelta(seconds=elapsed))
-                print("Elapsed [{}], G_step [{}/{}], D_step[{}/{}], d_out_real: {:.4f}, "
-                      " ave_gamma_l3: {:.4f}".
+                print("Elapsed [{}], G_step [{}/{}], D_step[{}/{}], d_out_real: {:.4f}, ".
                       format(elapsed, step + 1, self.total_step, (step + 1),
-                             self.total_step , d_loss_real.data.item(),
-                             self.G.attn.attn_base.gamma.mean().data.item()))
+                             self.total_step , d_loss_real.data.item()))
+    
 
             # Update sigma of attention layers
             if (step + 1) % self.sigma_update_step == 0:
-                self.G.attn.update_sigma(self.G.attn.sigma + self.sigma_update_delta)
-                self.D.attn.update_sigma(self.D.attn.sigma + self.sigma_update_delta)
-                print('Updated sigma to {}'.format(self.G.attn.sigma))
+                if self.model == 'psagan':
+                    self.G.attn.update_sigma(self.G.attn.sigma + self.sigma_update_delta)
+                    self.D.attn.update_sigma(self.D.attn.sigma + self.sigma_update_delta)
+                    print('Updated sigma to {}'.format(self.G.attn.sigma))
 
-        
+            
 
             # Sample images
             if (step + 1) % self.sample_step == 0:
-                fake_images,_= self.G(fixed_z)
+                if self.model != 'dcgan':
+                    fake_images, _ = self.G(fixed_z)
+                else:
+                    fake_images = self.G(fixed_z)
+
                 save_image(denorm(fake_images.data),
                            os.path.join(self.sample_path, '{}_fake.png'.format(step + 1)))
-                g_loss_log.append(g_loss_fake.data.item())
-                example_images.append(denorm(fake_images.data))
+     
                 wandb.log({
-                    "Examples":  [wandb.Image(denorm(fake_images.data), caption=f"Step {step + 1}")],
+                   "Examples":  [wandb.Image(denorm(fake_images.data), caption=f"Step {step + 1}")],
                     "Training G Loss": g_loss_fake.data.item(),
                     "Training D Loss": d_loss.data.item(),
                     "Training Gamma": self.G.attn.attn_base.gamma.mean().data.item(),
-                    "Training D loss real": d_loss_real.data.item(),
-                    "Generator attention" : [wandb.Image(gf)]})
+                    "Training D loss real": d_loss_real.data.item()
+                    })
+                if self.model == 'psagan':
+                    wandb.log({
+                        "Generator attention" : [wandb.Image(F.interpolate(gf, size = 512), caption=f"Step {step + 1}")]                        })
 
             if (step+1) % model_save_step==0:
                 torch.save(self.G.state_dict(),
