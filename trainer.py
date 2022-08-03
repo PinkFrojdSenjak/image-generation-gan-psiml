@@ -51,6 +51,7 @@ class Trainer(object):
         self.model_save_step = config.model_save_step
         self.sigma_update_step = config.sigma_update_step
         self.sigma_update_delta = config.sigma_update_delta
+        self.accum_step = config.accum_step
 
         self.version = config.version
         self.use_gpu = config.use_gpu
@@ -64,18 +65,16 @@ class Trainer(object):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.build_model()
-        wandb.init(entity = 'wandb', project = 'image-generation-gan')
+        wandb.init(entity = 'pavlepadjin', project = 'image-generation-gan')
         wandb.watch_called = False
 
         wconfig = wandb.config          # Initialize config
-        wconfig.batch_size = 32          # input batch size for training (default: 64)
-        wconfig.test_batch_size = 10    # input batch size for testing (default: 1000)
-        wconfig.epochs = 50             # number of epochs to train (default: 10)
-        wconfig.lr = 0.1               # learning rate (default: 0.01)
+        wconfig.batch_size = self.batch_size          # input batch size for training (default: 64)
+        wconfig.g_lr = self.g_lr 
+        wconfig.d_lr = self.d_lr
         wconfig.momentum = 0.1          # SGD momentum (default: 0.5) 
-        wconfig.no_cuda = False         # disables CUDA training
-        wconfig.seed = 42               # random seed (default: 42)
-        wconfig.log_interval = 10 
+        wconfig.cuda  = self.use_gpu         # disables CUDA training
+    
 
         if self.use_tensorboard:
             self.build_tensorboard()
@@ -97,6 +96,7 @@ class Trainer(object):
         self.d_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.D.parameters()), self.d_lr, [self.beta1, self.beta2])
 
         self.c_loss = torch.nn.CrossEntropyLoss()
+        
 
         
     def load_pretrained_model(self):
@@ -135,6 +135,8 @@ class Trainer(object):
             start = 0
 
         start_time = time.time()
+        g_loss_log = []
+        example_images = []
         for step in range(start, self.total_step):
             
              # ================== Train D ================== #
@@ -163,10 +165,13 @@ class Trainer(object):
             d_loss_fake = d_out_fake.mean()
 
             d_loss = d_loss_real + d_loss_fake
-            self.reset_grad()
 
             d_loss.backward()
-            self.d_optimizer.step()
+            
+            if (step + 1) % self.accum_step == 0:
+                self.d_optimizer.step()
+                self.d_optimizer.zero_grad()
+
 
             # Compute gradient penalty
             alpha = torch.rand(real_images.size(0), 1, 1, 1).to(self.device)
@@ -191,10 +196,8 @@ class Trainer(object):
             # Backward + Optimize
             d_loss = self.lambda_gp * d_loss_gp
 
-            self.reset_grad()
-            d_loss.backward()
-            self.d_optimizer.step()
-
+            
+        
             # ================== Train G ================== #
 
              # Create random noise
@@ -206,9 +209,15 @@ class Trainer(object):
            
             g_loss_fake = - g_out_fake.mean()
 
-            self.reset_grad()
+            d_loss.backward()
             g_loss_fake.backward()
-            self.g_optimizer.step()
+
+            if (step + 1) % self.accum_step == 0:
+                self.d_optimizer.step()
+                self.g_optimizer.step()
+                self.reset_grad()
+           
+            
 
 
             # Print out log info
@@ -227,13 +236,22 @@ class Trainer(object):
                 self.D.attn.update_sigma(self.D.attn.sigma + self.sigma_update_delta)
                 print('Updated sigma to {}'.format(self.G.attn.sigma))
 
-               
+        
 
             # Sample images
             if (step + 1) % self.sample_step == 0:
                 fake_images,_= self.G(fixed_z)
                 save_image(denorm(fake_images.data),
                            os.path.join(self.sample_path, '{}_fake.png'.format(step + 1)))
+                g_loss_log.append(g_loss_fake.data.item())
+                example_images.append(denorm(fake_images.data))
+                wandb.log({
+                    "Examples":  [wandb.Image(denorm(fake_images.data), caption=f"Step {step + 1}")],
+                    "Training G Loss": g_loss_fake.data.item(),
+                    "Training D Loss": d_loss.data.item(),
+                    "Training Gamma": self.G.attn.attn_base.gamma.mean().data.item(),
+                    "Training D loss real": d_loss_real.data.item(),
+                    "Generator attention" : [wandb.Image(gf)]})
 
             if (step+1) % model_save_step==0:
                 torch.save(self.G.state_dict(),

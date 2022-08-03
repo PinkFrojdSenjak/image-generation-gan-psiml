@@ -8,3 +8,8 @@ test.ipynb
 ref_trainer.py
 samples
 models
+*.yaml
+*.json
+*.txt
+*.wandb
+*.log

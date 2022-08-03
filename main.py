@@ -39,7 +39,7 @@ def main(config):
         #tester = Tester(data_loader.loader(), config)
         #tester.test()
 
-if __name__ == '__main__':
+if __name__ == '__main__': 
     config = get_parameters()
     print(config)
     main(config)

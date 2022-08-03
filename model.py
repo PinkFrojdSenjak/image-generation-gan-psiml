@@ -17,8 +17,8 @@ class Self_Attn_Base(nn.Module):
         self.chanel_in = in_dim
         self.activation = activation
         
-        self.query_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim//8 , kernel_size= 1)
-        self.key_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim//8 , kernel_size= 1)
+        self.query_conv = nn.Conv2d(in_channels = in_dim , out_channels = 1 , kernel_size= 1)
+        self.key_conv = nn.Conv2d(in_channels = in_dim , out_channels = 1 , kernel_size= 1)
         self.value_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim , kernel_size= 1)
         self.gamma = nn.Parameter(torch.zeros(1))
 
@@ -63,10 +63,8 @@ class Self_Attn_Generator(nn.Module):
 
     def forward(self,x):
       
-        out = x.permute(0,2,1,3)
-        out, attention = self.attn_base(out)
+        out, attention = self.attn_base(x)
         
-        out = out.permute(0,2,1,3)
         out = self.sigma * out + (1 - self.sigma) * x 
         return out, attention
 
@@ -117,7 +115,7 @@ class Self_Attn_Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, pretrained_pgan, attention_dim = 128, use_gpu=True):
+    def __init__(self, pretrained_pgan, attention_dim = 3, use_gpu=True):
         super(Generator, self).__init__()
         self.use_gpu = use_gpu
 
@@ -126,22 +124,23 @@ class Generator(nn.Module):
         for param in pretrained_pgan.netG.parameters():
             param.requires_grad = False
         
-            
         self.netG = copy.deepcopy(pretrained_pgan.netG)
 
-        if use_gpu:
-            self.netG.cuda()
+    
 
+        #self.pre_attn = nn.Conv2d(in_channels=3, out_channels=attention_dim, kernel_size=1)
         self.attn = Self_Attn_Generator(attention_dim, 'relu')
+        self.toRGB = nn.Conv2d(attention_dim, 3, kernel_size=1, stride=1, padding=0)
     
     def forward(self, x):
         x = self.netG(x)
-        x = self.attn(x)
-        return x
+        x, attn = self.attn(x)
+        x = self.toRGB(x)
+        return x, attn
 
     
 class Discriminator(nn.Module):
-    def __init__(self, pretrained_pgan, attention_dim = 128, use_gpu=True):
+    def __init__(self, pretrained_pgan, attention_dim = 3, use_gpu=True):
         super(Discriminator, self).__init__()
         self.use_gpu = use_gpu
 
