@@ -7,7 +7,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torchvision.utils import save_image
 
-from model import Generator, Discriminator
+from model import Generator, Discriminator, DCGenerator, DCDiscriminator
 from utils import *
 import wandb
 
@@ -86,10 +86,10 @@ class Trainer(object):
     def build_model(self):
         #self.G = Generator(self.batch_size,self.imsize, self.z_dim, self.g_conv_dim).cuda()
         #self.D = Discriminator(self.batch_size,self.imsize, self.d_conv_dim).cuda()
-        self.G = Generator(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
+        self.G = DCGenerator(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.G.to(self.device)
 
-        self.D = Discriminator(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
+        self.D = DCDiscriminator(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.D.to(self.device)
 
         self.g_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.G.parameters()), self.g_lr, [self.beta1, self.beta2])
