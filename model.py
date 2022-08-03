@@ -123,8 +123,8 @@ class Generator(nn.Module):
 
         # freeze generator parameters
         #       
-        #for param in pretrained_pgan.netG.parameters():
-        #    param.requires_grad = False
+        for param in pretrained_pgan.netG.parameters():
+            param.requires_grad = False
         
             
         self.netG = copy.deepcopy(pretrained_pgan.netG)
@@ -146,8 +146,8 @@ class Discriminator(nn.Module):
         self.use_gpu = use_gpu
 
         # freeze discriminator parameters
-        #for param in pretrained_pgan.netD.parameters():
-        #    param.requires_grad = False
+        for param in pretrained_pgan.netD.parameters():
+            param.requires_grad = False
         
         pretrained_pgan.netD.decisionLayer = nn.Identity() #Self_Attn(pretrained_pgan.netD.scalesDepth[0], 'relu')
                   
@@ -161,10 +161,7 @@ class Discriminator(nn.Module):
     
     def forward(self, x):
         x = self.netD(x)
-        x = x.view(x.size(0), -1, 2, 2)
-        x, attn = self.attn(x)
-        x = x.squeeze()
-        x = self.decisionLayer(x) # ovo treba srediti
-        return x, attn
+         # ovo treba srediti
+        return x
     
 

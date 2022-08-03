@@ -135,13 +135,13 @@ class Trainer(object):
 
              # Compute loss with real images
             # dr1, dr2, df1, df2, gf1, gf2 are attention scores
-            d_out_real,dr = self.D(real_images)
+            d_out_real = self.D(real_images)
             
             d_loss_real = - torch.mean(d_out_real)
            
             z = tensor2var(torch.randn(real_images.size(0), self.z_dim))
             fake_images, gf = self.G(z)
-            d_out_fake,df, = self.D(fake_images)
+            d_out_fake = self.D(fake_images)
 
             d_loss_fake = d_out_fake.mean()
 
@@ -156,7 +156,7 @@ class Trainer(object):
             
             alpha = alpha.expand_as(real_images)
             interpolated = Variable(alpha * real_images.data + (1 - alpha) * fake_images.data, requires_grad=True)
-            out,_ = self.D(interpolated)
+            out = self.D(interpolated)
 
             grad_outputs = torch.ones(out.size()).to(self.device)
 
@@ -185,7 +185,7 @@ class Trainer(object):
             fake_images,_ = self.G(z)
 
             # Compute loss with fake images
-            g_out_fake,_ = self.D(fake_images)  # batch x n
+            g_out_fake = self.D(fake_images)  # batch x n
            
             g_loss_fake = - g_out_fake.mean()
 

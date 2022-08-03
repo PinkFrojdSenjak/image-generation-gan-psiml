@@ -1,9 +1,11 @@
 import torch
-import matplotlib.pyplot as plt
-import torchvision
 
+from torchvision.utils import save_image
 use_gpu = True if torch.cuda.is_available() else False
 
+pass
+
+'''
 # trained on high-quality celebrity faces "celebA" dataset
 # this model outputs 512 x 512 pixel images
 model = torch.hub.load('facebookresearch/pytorch_GAN_zoo:hub',
@@ -29,4 +31,4 @@ with torch.no_grad():
 grid = torchvision.utils.make_grid(generated_images.clamp(min=-1, max=1), scale_each=True, normalize=True)
 plt.imshow(grid.permute(1, 2, 0).cpu().numpy())
 
-plt.show()
+plt.show()'''
