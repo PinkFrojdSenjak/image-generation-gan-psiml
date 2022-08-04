@@ -31,8 +31,8 @@ def get_parameters():
 
     #steps 
     parser.add_argument('--log_step', type=int, default=100)
-    parser.add_argument('--sample_step', type=int, default=100)
-    parser.add_argument('--model_save_step', type=int, default=500)
+    parser.add_argument('--sample_step', type=int, default=500)
+    parser.add_argument('--model_save_step', type=int, default=1000)
     parser.add_argument('--sigma-update-step', type=int, default=100)
     parser.add_argument('--sigma-update-delta', type=float, default=0.005)
     parser.add_argument('--accum-step', type = float, default=4)
