@@ -172,11 +172,13 @@ class Trainer(object):
 
             d_loss = d_loss_real + d_loss_fake
 
+            self.reset_grad()
             d_loss.backward()
+            self.d_optimizer.step()
             
-            if (step + 1) % self.accum_step == 0:
-                self.d_optimizer.step()
-                self.d_optimizer.zero_grad()
+            #if (step + 1) % self.accum_step == 0:
+            #    self.d_optimizer.step()
+            #    self.d_optimizer.zero_grad()
 
 
             # Compute gradient penalty
@@ -202,7 +204,9 @@ class Trainer(object):
             # Backward + Optimize
             d_loss = self.lambda_gp * d_loss_gp
 
-            
+            self.reset_grad()
+            d_loss.backward()
+            self.d_optimizer.step()
         
             # ================== Train G ================== #
 
@@ -218,14 +222,9 @@ class Trainer(object):
            
             g_loss_fake = - g_out_fake.mean()
 
-            d_loss.backward()
+            self.reset_grad()
             g_loss_fake.backward()
-
-            if (step + 1) % self.accum_step == 0:
-                self.d_optimizer.step()
-                self.g_optimizer.step()
-                self.reset_grad()
-           
+            self.g_optimizer.step()
             
 
 
