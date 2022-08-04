@@ -20,7 +20,7 @@ class Self_Attn_Base(nn.Module):
         self.query_conv = nn.Conv2d(in_channels = in_dim , out_channels = 1 , kernel_size= 1)
         self.key_conv = nn.Conv2d(in_channels = in_dim , out_channels = 1 , kernel_size= 1)
         self.value_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim , kernel_size= 1)
-        self.gamma = nn.Parameter(torch.zeros(1))
+        self.gamma = nn.Parameter(torch.ones(1))
 
         self.softmax  = nn.Softmax(dim=-1) #
 
@@ -81,7 +81,7 @@ class Self_Attn_Discriminator(nn.Module):
         self.value_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim , kernel_size= 1)
 
         self.softmax  = nn.Softmax(dim=-1) #
-        self.gamma = nn.Parameter(torch.zeros(1))
+        self.gamma = nn.Parameter(torch.ones(1))
 
         self.sigma = 0
 
@@ -200,10 +200,10 @@ class DCGenerator(nn.Module):
     def forward(self, z):
         z = z.view(z.size(0), z.size(1), 1, 1)
         x = self.main(z)
-        #x, attn = self.attn(x)
+        x, attn = self.attn(x)
         x = self.toRGB(x)
         x = self.tanh(x)
-        return x#, attn
+        return x, attn
 
 class DCDiscriminator(nn.Module):
     def __init__(self, z_dim = 512, ndf = 64) -> None:

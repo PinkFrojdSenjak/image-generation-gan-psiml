@@ -74,7 +74,7 @@ class Trainer(object):
         wconfig.g_lr = self.g_lr 
         wconfig.d_lr = self.d_lr
         wconfig.momentum = 0.1          # SGD momentum (default: 0.5) 
-        wconfig.cuda  = self.use_gpu         # disables CUDA training
+        wconfig.cuda  = self.device == torch.device('cuda')      
     
 
         if self.use_tensorboard:
@@ -137,6 +137,10 @@ class Trainer(object):
         start_time = time.time()
         g_loss_log = []
         example_images = []
+        wandb.watch(self.G, log="all")
+        wandb.watch(self.D, log="all")
+
+
         for step in range(start, self.total_step):
             
              # ================== Train D ================== #
@@ -256,16 +260,18 @@ class Trainer(object):
                 save_image(denorm(fake_images.data),
                            os.path.join(self.sample_path, '{}_fake.png'.format(step + 1)))
      
-                wandb.log({
+                log_dict = {
                    "Examples":  [wandb.Image(denorm(fake_images.data), caption=f"Step {step + 1}")],
                     "Training G Loss": g_loss_fake.data.item(),
                     "Training D Loss": d_loss.data.item(),
                     "Training Gamma": self.G.attn.attn_base.gamma.mean().data.item(),
                     "Training D loss real": d_loss_real.data.item()
-                    })
-                if self.model == 'psagan':
-                    wandb.log({
-                        "Generator attention" : [wandb.Image(F.interpolate(gf, size = 512), caption=f"Step {step + 1}")]                        })
+                    }
+                
+                if self.model != 'dcgan':
+                    log_dict['Generator attention'] = [wandb.Image(F.interpolate(gf, size = 512), caption=f"Step {step + 1}")]
+
+                wandb.log(log_dict)                
 
             if (step+1) % model_save_step==0:
                 torch.save(self.G.state_dict(),
