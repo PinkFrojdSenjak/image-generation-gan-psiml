@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from torchvision.utils import save_image
 from torch.nn import functional as F
 
-from model import Generator, Discriminator, DCGenerator, DCDiscriminator
+from model import Generator, Discriminator, DCGenerator, DCDiscriminator, DCSAGenerator
 from utils import *
 import wandb
 
@@ -86,7 +86,7 @@ class Trainer(object):
 
     def build_model(self):
 
-        self.G = DCGenerator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
+        self.G = DCSAGenerator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.G.to(self.device)
 
         self.D = DCDiscriminator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)

@@ -192,6 +192,47 @@ class DCGenerator(nn.Module):
             # state size. 3 x 64 x 64
         )
 
+        
+        self.toRGB = nn.ConvTranspose2d(16, 3, 4, 2, 1, bias=False)
+        # 3 x 128 x 128
+        self.tanh = nn.Tanh()
+
+    def forward(self, z):
+        z = z.view(z.size(0), z.size(1), 1, 1)
+        x = self.main(z)
+    
+        x = self.toRGB(x)
+        x = self.tanh(x)
+        return x
+
+
+class DCSAGenerator(nn.Module):
+    def __init__(self, z_dim = 512, ngf = 64) -> None:
+        super().__init__()
+        self.z_dim = z_dim
+        self.ngf = ngf
+        self.main = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d( z_dim, ngf * 16, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(ngf * 16),
+            nn.ReLU(True),
+            # state size. (ngf*16) x 4 x 4
+            nn.ConvTranspose2d(ngf * 16, ngf * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 8),
+            nn.ReLU(True),
+            # state size. (ngf*8) x 8 x 8
+            nn.ConvTranspose2d( ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 4),
+            nn.ReLU(True),
+            # state size. (ngf*4) x 16 x 16
+            nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 2),
+            nn.ReLU(True),
+            # state size. (ngf*2) x 32 x 32
+            nn.ConvTranspose2d( ngf * 2, 16, 4, 2, 1, bias=False),
+            # state size. 3 x 64 x 64
+        )
+
         self.attn = Self_Attn_Generator(16, 'relu')
         self.toRGB = nn.ConvTranspose2d(16, 3, 4, 2, 1, bias=False)
         # 3 x 128 x 128
@@ -204,6 +245,7 @@ class DCGenerator(nn.Module):
         x = self.toRGB(x)
         x = self.tanh(x)
         return x, attn
+
 
 class DCDiscriminator(nn.Module):
     def __init__(self, z_dim = 512, ndf = 64) -> None:
