@@ -19,7 +19,7 @@ import torchvision.utils as vutils
 
 from ignite.engine import Engine, Events
 import ignite.distributed as idist
-from model import DCGenerator, DCDiscriminator
+from model import DCGenerator, DCDiscriminator, DCSAGenerator
 
 ignite.utils.manual_seed(999)
 
