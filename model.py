@@ -192,7 +192,7 @@ class DCGenerator(nn.Module):
             # state size. 3 x 64 x 64
         )
 
-        self.attn = Self_Attn_Generator(16, 'relu')
+        self.attn = Self_Attn_Base(16, 'relu')
 
         self.toRGB = nn.ConvTranspose2d(16, 3, 4, 2, 1, bias=False)
         # 3 x 128 x 128
