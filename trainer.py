@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from torchvision.utils import save_image
 from torch.nn import functional as F
 
-from model import Generator, Discriminator, DCGenerator, DCDiscriminator, DCSAGenerator
+from model import Generator, Discriminator, DCGenerator, DCDiscriminator, DCSAGenerator, DCSADiscriminator
 from utils import *
 import wandb
 
@@ -89,7 +89,7 @@ class Trainer(object):
         self.G = DCSAGenerator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.G.to(self.device)
 
-        self.D = DCDiscriminator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
+        self.D = DCSADiscriminator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.D.to(self.device)
 
         self.g_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.G.parameters()), self.g_lr, [self.beta1, self.beta2])
@@ -149,16 +149,19 @@ class Trainer(object):
 
 
             try:
-                real_images = next(data_iter) # real_images, _ = next(data_iter)
+                real_images = next(data_iter) 
             except: # if we went through the whole dataset, start again
                 data_iter = iter(self.data_loader)
-                real_images = next(data_iter) #real_images, _ = next(data_iter)
+                real_images = next(data_iter) 
             
             real_images = tensor2var(real_images).to(self.device)
 
              # Compute loss with real images
             # dr1, dr2, df1, df2, gf1, gf2 are attention scores
-            d_out_real = self.D(real_images)
+            if self.model == 'sa2dcgan':
+                d_out_real, _ = self.D(real_images)
+            else:
+                d_out_real = self.D(real_images)
             
             d_loss_real = - torch.mean(d_out_real)
            
@@ -169,8 +172,10 @@ class Trainer(object):
             else:
                 fake_images = self.G(z)
                 
-
-            d_out_fake = self.D(fake_images)
+            if self.model == 'sa2dcgan':
+                d_out_fake, df = self.D(fake_images)
+            else:
+                d_out_fake = self.D(fake_images)
 
             d_loss_fake = d_out_fake.mean()
 
@@ -190,7 +195,11 @@ class Trainer(object):
             
             alpha = alpha.expand_as(real_images)
             interpolated = Variable(alpha * real_images.data + (1 - alpha) * fake_images.data, requires_grad=True)
-            out = self.D(interpolated)
+            
+            if self.model != 'sa2dcgan':
+                out = self.D(interpolated)
+            else:
+                out, df = self.D(interpolated)
 
             grad_outputs = torch.ones(out.size()).to(self.device)
 
@@ -222,8 +231,11 @@ class Trainer(object):
                 fake_images = self.G(z)
 
             # Compute loss with fake images
-            g_out_fake = self.D(fake_images)  # batch x n
-           
+            if self.model == 'sa2dcgan':
+                g_out_fake, _ = self.D(fake_images)  # batch x n
+            else:
+                g_out_fake = self.D(fake_images)
+
             g_loss_fake = - g_out_fake.mean()
 
             self.reset_grad()
@@ -270,6 +282,8 @@ class Trainer(object):
                 
                 if self.model != 'dcgan':
                     log_dict['Generator attention'] = [wandb.Image(F.interpolate(gf, size = 512), caption=f"Step {step + 1}")]
+                if self.model == 'sa2dcgan':
+                    log_dict['Discriminator attention'] = [wandb.Image(F.interpolate(df, size = 512), caption=f"Step {step + 1}")]
 
                 wandb.log(log_dict)                
 

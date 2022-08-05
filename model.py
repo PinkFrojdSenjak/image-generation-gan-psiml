@@ -291,7 +291,7 @@ class DCSADiscriminator(nn.Module):
 
         self.attn = Self_Attn_Discriminator(ndf * 2, 'leaky')
 
-        self.main = nn.Sequential(
+        self.before_attn = nn.Sequential(
             # input is 3 x 128 x 128
             nn.Conv2d(3, ndf, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
@@ -300,8 +300,9 @@ class DCSADiscriminator(nn.Module):
             nn.BatchNorm2d(ndf * 2),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*2) x 32 x 32
-            self.attn,
-            
+        )
+
+        self.after_attn = nn.Sequential(    
             nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 4),
             nn.LeakyReLU(0.2, inplace=True),
@@ -321,7 +322,9 @@ class DCSADiscriminator(nn.Module):
 
         
     def forward(self, x):
-        x = self.main(x)
-        return x
+        x = self.before_attn(x)
+        x, attn = self.attn(x)
+        x = self.after_attn(x)
+        return x, attn
 
 

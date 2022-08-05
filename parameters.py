@@ -8,7 +8,7 @@ def get_parameters():
     parser = argparse.ArgumentParser()
 
     # Model hyper-parameters
-    parser.add_argument('--model', type=str, default='psagan', choices=['psagan', 'pgan', 'dcsagan', 'sagan', 'dcgan'])
+    parser.add_argument('--model', type=str, default='psagan', choices=['psagan', 'pgan', 'dcsagan', 'sagan', 'dcgan', 'sa2dcgan'])
     parser.add_argument('--adv_loss', type=str, default='wgan-gp', choices=['wgan-gp', 'hinge'])
     parser.add_argument('--imsize', type=int, default=32)
     parser.add_argument('--g_num', type=int, default=5)
