@@ -283,7 +283,7 @@ class Trainer(object):
                 if self.model != 'dcgan':
                     log_dict['Generator attention'] = [wandb.Image(F.interpolate(gf, size = 512), caption=f"Step {step + 1}")]
                 if self.model == 'sa2dcgan':
-                    log_dict['Discriminator attention'] = [wandb.Image(F.interpolate(df, size = 512), caption=f"Step {step + 1}")]
+                    log_dict['Discriminator attention'] = [wandb.Image(F.interpolate(df.unsqueeze(1), size = 512), caption=f"Step {step + 1}")]
 
                 wandb.log(log_dict)                
 
