@@ -1,34 +1,70 @@
 import torch
+import torchvision
+import ignite
+from ignite.metrics import FID, InceptionScore
 
-from torchvision.utils import save_image
-use_gpu = True if torch.cuda.is_available() else False
+import os
+import logging
+import matplotlib.pyplot as plt
 
-pass
+import numpy as np
 
-'''
-# trained on high-quality celebrity faces "celebA" dataset
-# this model outputs 512 x 512 pixel images
-model = torch.hub.load('facebookresearch/pytorch_GAN_zoo:hub',
-                       'PGAN', model_name='celeba',
-                       pretrained=True, useGPU=use_gpu)
+from torchsummary import summary
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from datasets import FaceDataset
+
+import torchvision.transforms as transforms
+import torchvision.utils as vutils
+
+from ignite.engine import Engine, Events
+import ignite.distributed as idist
+from model import DCGenerator, DCDiscriminator
+
+ignite.utils.manual_seed(999)
+
+print(idist.device())
+fid_metric = FID(device=idist.device())
+
+import PIL.Image as Image
 
 
+def interpolate(batch):
+    arr = []
+    for img in batch:
+        pil_img = transforms.ToPILImage()(img)
+        resized_img = pil_img.resize((299,299), Image.BILINEAR)
+        arr.append(transforms.ToTensor()(resized_img))
+    return torch.stack(arr)
 
-discriminator = model.netD
-generator = model.netG
+batch_size = 16
+latent_dim = 512
 
-for param_tensor in generator.state_dict():
-    print(param_tensor, "\t", generator.state_dict()[param_tensor].size())
+netG = DCGenerator(latent_dim)
+model_save_path = './models/dcsagan - 1'
+pretrained_model = '0'
 
+netG.load_state_dict(torch.load(os.path.join(
+            model_save_path, '{}_G.pth'.format(pretrained_model))))
+        #self.D.load_state_dict(torch.load(os.path.join(
+        #    self.model_save_path, '{}_D.pth'.format(self.pretrained_model))))
 
-num_images = 4
-noise, _ = model.buildNoiseData(num_images)
-with torch.no_grad():
-    generated_images = model.test(noise)
+def evaluation_step(engine, batch):
+    with torch.no_grad():
+        noise = torch.randn(batch_size, latent_dim, device=idist.device())
+        netG.eval()
+        fake_batch = netG(noise)
+        fake = interpolate(fake_batch)
+        real = interpolate(batch[0])
+        print('odradjeno')
+        return fake, real
 
-# let's plot these images using torchvision and matplotlib
+dataset = FaceDataset('img_celeba_cropped')
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-grid = torchvision.utils.make_grid(generated_images.clamp(min=-1, max=1), scale_each=True, normalize=True)
-plt.imshow(grid.permute(1, 2, 0).cpu().numpy())
+evaluator = Engine(evaluation_step)
+fid_metric.attach(evaluator, "fid")
 
-plt.show()'''
+evaluator.run()
