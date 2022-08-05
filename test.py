@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-from torchsummary import summary
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -39,17 +37,24 @@ def interpolate(batch):
         arr.append(transforms.ToTensor()(resized_img))
     return torch.stack(arr)
 
+def getModel():
+    netG = DCGenerator(latent_dim).to(device)
+    model_save_path = './models/psagan_2'
+    pretrained_model = '86000'
+
+    netG.load_state_dict(torch.load(os.path.join(
+            model_save_path, '{}_G.pth'.format(pretrained_model))))
+    return netG
+
 batch_size = 16
 latent_dim = 512
 
-netG = DCGenerator(latent_dim)
-model_save_path = './models/dcsagan - 1'
-pretrained_model = '0'
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-netG.load_state_dict(torch.load(os.path.join(
-            model_save_path, '{}_G.pth'.format(pretrained_model))))
-        #self.D.load_state_dict(torch.load(os.path.join(
-        #    self.model_save_path, '{}_D.pth'.format(self.pretrained_model))))
+netG = getModel()
+#netG =  torch.hub.load('facebookresearch/pytorch_GAN_zoo:hub',
+#                       'PGAN', model_name='celeba',
+#                       pretrained=True, useGPU=True).netG
 
 def evaluation_step(engine, batch):
     with torch.no_grad():
@@ -57,14 +62,23 @@ def evaluation_step(engine, batch):
         netG.eval()
         fake_batch = netG(noise)
         fake = interpolate(fake_batch)
-        real = interpolate(batch[0])
-        print('odradjeno')
+        real = interpolate(batch)
         return fake, real
 
 dataset = FaceDataset('img_celeba_cropped')
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False)
+
 
 evaluator = Engine(evaluation_step)
 fid_metric.attach(evaluator, "fid")
 
-evaluator.run()
+num_batches = 20
+idxs = np.arange(num_batches * batch_size)
+subset = torch.utils.data.Subset(dataset, idxs)
+
+dataloader = torch.utils.data.DataLoader(subset, batch_size=batch_size, shuffle=True)
+
+
+evaluator.run(dataloader)
+metrics = evaluator.state.metrics
+
+pass
