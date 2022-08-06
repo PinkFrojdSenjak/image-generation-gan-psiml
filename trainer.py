@@ -89,7 +89,7 @@ class Trainer(object):
         self.G = DCSAGenerator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.G.to(self.device)
 
-        self.D = DCSADiscriminator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
+        self.D = DCDiscriminator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.D.to(self.device)
 
         self.g_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.G.parameters()), self.g_lr, [self.beta1, self.beta2])
@@ -185,9 +185,6 @@ class Trainer(object):
             d_loss.backward()
             self.d_optimizer.step()
             
-            #if (step + 1) % self.accum_step == 0:
-            #    self.d_optimizer.step()
-            #    self.d_optimizer.zero_grad()
 
 
             # Compute gradient penalty

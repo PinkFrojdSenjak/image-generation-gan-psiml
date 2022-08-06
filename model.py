@@ -289,7 +289,7 @@ class DCSADiscriminator(nn.Module):
         self.z_dim = z_dim
         self.ndf = ndf
 
-        self.attn = Self_Attn_Discriminator(ndf * 2, 'leaky')
+        self.attn = Self_Attn_Base(ndf * 2, 'leaky')
 
         self.before_attn = nn.Sequential(
             # input is 3 x 128 x 128
