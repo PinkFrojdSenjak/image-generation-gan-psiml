@@ -64,17 +64,19 @@ class Trainer(object):
         self.sample_path = os.path.join(config.sample_path, self.version)
         self.model_save_path = os.path.join(config.model_save_path, self.version)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.use_wandb = config.use_wandb
 
         self.build_model()
-        wandb.init(entity = 'pavlepadjin', project = 'image-generation-gan')
-        wandb.watch_called = False
+        if self.use_wandb:
+            wandb.init(entity = 'pavlepadjin', project = 'image-generation-gan')
+            wandb.watch_called = False
 
-        wconfig = wandb.config          # Initialize config
-        wconfig.batch_size = self.batch_size          # input batch size for training (default: 64)
-        wconfig.g_lr = self.g_lr 
-        wconfig.d_lr = self.d_lr
-        wconfig.momentum = 0.1          # SGD momentum (default: 0.5) 
-        wconfig.cuda  = self.device == torch.device('cuda')      
+            wconfig = wandb.config          # Initialize config
+            wconfig.batch_size = self.batch_size          # input batch size for training (default: 64)
+            wconfig.g_lr = self.g_lr 
+            wconfig.d_lr = self.d_lr
+            wconfig.momentum = 0.1          # SGD momentum (default: 0.5) 
+            wconfig.cuda  = self.device == torch.device('cuda')      
     
 
         if self.use_tensorboard:
@@ -117,8 +119,9 @@ class Trainer(object):
 
     def train(self):
 
-        wandb.watch(self.G, log="all")
-        wandb.watch(self.D, log="all")
+        if self.use_wandb:
+            wandb.watch(self.G, log="all")
+            wandb.watch(self.D, log="all")
 
 
         data_iter = iter(self.data_loader)
@@ -137,8 +140,7 @@ class Trainer(object):
         start_time = time.time()
         g_loss_log = []
         example_images = []
-        wandb.watch(self.G, log="all")
-        wandb.watch(self.D, log="all")
+       
 
 
         for step in range(start, self.total_step):
@@ -268,20 +270,21 @@ class Trainer(object):
 
                 save_image(denorm(fake_images.data),
                            os.path.join(self.sample_path, '{}_fake.png'.format(step + 1)))
-     
-                log_dict = {
-                   "Examples":  [wandb.Image(denorm(fake_images.data), caption=f"Step {step + 1}")],
-                    "Training G Loss": g_loss_fake.data.item(),
-                    "Training D Loss": d_loss.data.item(),
-                    "Training D loss real": d_loss_real.data.item()
-                    }
-                
-                if self.model not in ['dcgan','swingan']:
-                    log_dict['Generator attention'] = [wandb.Image(F.interpolate(gf, size = 512), caption=f"Step {step + 1}")]
-                if self.model == 'sa2dcgan':
-                    log_dict['Discriminator attention'] = [wandb.Image(F.interpolate(df.unsqueeze(1), size = 512), caption=f"Step {step + 1}")]
+                    
+                if self.use_wandb:
+                    log_dict = {
+                    "Examples":  [wandb.Image(denorm(fake_images.data), caption=f"Step {step + 1}")],
+                        "Training G Loss": g_loss_fake.data.item(),
+                        "Training D Loss": d_loss.data.item(),
+                        "Training D loss real": d_loss_real.data.item()
+                        }
+                    
+                    if self.model not in ['dcgan','swingan']:
+                        log_dict['Generator attention'] = [wandb.Image(F.interpolate(gf, size = 512), caption=f"Step {step + 1}")]
+                    if self.model == 'sa2dcgan':
+                        log_dict['Discriminator attention'] = [wandb.Image(F.interpolate(df.unsqueeze(1), size = 512), caption=f"Step {step + 1}")]
 
-                wandb.log(log_dict)                
+                    wandb.log(log_dict)                
 
             if (step+1) % model_save_step==0:
                 torch.save(self.G.state_dict(),

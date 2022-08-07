@@ -53,5 +53,5 @@ def get_parameters():
     parser.add_argument('--model_save_path', type=str, default='./models')
     parser.add_argument('--sample_path', type=str, default='./samples')
     parser.add_argument('--attn_path', type=str, default='./attn')
-
+    parser.add_argument('--use-wandb', type = int, default = True)
     return parser.parse_args()
