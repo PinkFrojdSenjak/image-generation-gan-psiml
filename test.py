@@ -19,7 +19,7 @@ import torchvision.utils as vutils
 
 from ignite.engine import Engine, Events
 import ignite.distributed as idist
-from model import DCGenerator, DCDiscriminator, DCSAGenerator
+from model import DCGenerator, DCDiscriminator, DCSAGenerator, SwinGenerator
 
 
 import PIL.Image as Image
@@ -65,6 +65,14 @@ def getPGAN():
                        'PGAN', model_name='celeba',
                        pretrained=True, useGPU=True).netG
 
+def getSWINGAN():
+    netG = SwinGenerator(latent_dim).to(device)
+    model_save_path = './models/swingan - 1'
+    pretrained_model = '130000'
+
+    netG.load_state_dict(torch.load(os.path.join(
+            model_save_path, '{}_G.pth'.format(pretrained_model)), map_location=torch.device('cpu')))
+    return netG
 
 def getModel(model_name):
     if model_name == 'DCGAN':
@@ -75,6 +83,8 @@ def getModel(model_name):
         return getPGAN()
     elif model_name == 'DC2SAGAN':
         return getDC2SAGAN()
+    elif model_name == 'SWINGAN':
+        return getSWINGAN()
 
 ignite.utils.manual_seed(999)
 
@@ -86,7 +96,7 @@ latent_dim = 512
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-model_name = ''
+model_name = 'SWINGAN'
 netG = getModel(model_name)
 
 
@@ -94,7 +104,7 @@ def evaluation_step(engine, batch):
     with torch.no_grad():
         noise = torch.randn(batch_size, latent_dim, device=idist.device())
         netG.eval()
-        if model_name == 'DCGAN' or model_name == 'PGAN':
+        if model_name == 'DCGAN' or model_name == 'PGAN' or model_name == 'SWINGAN':
             fake_batch = netG(noise)
             fake = interpolate(fake_batch)
             real = interpolate(batch)
