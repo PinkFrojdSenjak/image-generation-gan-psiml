@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from spectral import SpectralNorm
 from custom_layers import EqualizedLinear
-
+from swinLayers import BasicLayer, PatchEmbed, PatchMerging
 
 class Self_Attn_Base(nn.Module):
     """ Self attention Layer"""
@@ -326,5 +326,58 @@ class DCSADiscriminator(nn.Module):
         x, attn = self.attn(x)
         x = self.after_attn(x)
         return x, attn
+
+
+
+
+class SwinGenerator(nn.Module):
+    def __init__(self, z_dim = 512, ngf = 64, embed_dim = 96) -> None:
+        super().__init__()
+
+        self.z_dim = z_dim
+        self.ngf = ngf
+        self.main = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d( z_dim, ngf * 16, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(ngf * 16),
+            nn.ReLU(True),
+            # state size. (ngf*16) x 4 x 4
+            nn.ConvTranspose2d(ngf * 16, ngf * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 8),
+            nn.ReLU(True),
+            # state size. (ngf*8) x 8 x 8
+            nn.ConvTranspose2d( ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 4),
+            nn.ReLU(True),
+            # state size. (ngf*4) x 16 x 16
+            nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 2),
+            nn.ReLU(True),
+            # state size. (ngf*2) x 32 x 32
+            nn.ConvTranspose2d( ngf * 2, 16, 4, 2, 1, bias=False),
+            # state size. 16 x 64 x 64
+            nn.ConvTranspose2d( 16, 3, 4, 2, 1, bias=False)
+            # state size. 3 x 128 x 128
+        )
+
+        self.patch_emb = PatchEmbed(img_size=128, patch_size=4, in_chans=3, embed_dim=embed_dim, flatten=True)
+        self.swin_block = BasicLayer(dim=embed_dim, out_dim=embed_dim, depth=2, num_heads=6, window_size=8, input_resolution=(32, 32), downsample=None)
+        self.final = nn.Sequential(
+        nn.ConvTranspose2d(embed_dim, embed_dim // 2, 4, 2, 1, bias=False),
+        nn.BatchNorm2d(embed_dim // 2),
+            nn.ReLU(True),
+        nn.ConvTranspose2d(embed_dim // 2, 3, 4, 2, 1, bias=False)
+        )
+
+    def forward(self, z):
+        z = z.view(z.size(0), z.size(1), 1, 1)
+        x = self.main(z)
+        x = self.patch_emb(x)
+        x = self.swin_block(x)
+        x = x.permute(0,2,1).view(x.size(0), -1,32, 32)
+        x = self.final(x)
+        return x
+
+        
 
 

@@ -8,7 +8,7 @@ def get_parameters():
     parser = argparse.ArgumentParser()
 
     # Model hyper-parameters
-    parser.add_argument('--model', type=str, default='psagan', choices=['psagan', 'pgan', 'dcsagan', 'sagan', 'dcgan', 'sa2dcgan'])
+    parser.add_argument('--model', type=str, default='psagan', choices=['psagan', 'pgan', 'dcsagan', 'sagan', 'dcgan', 'sa2dcgan', 'swingan'])
     parser.add_argument('--adv_loss', type=str, default='wgan-gp', choices=['wgan-gp', 'hinge'])
     parser.add_argument('--imsize', type=int, default=32)
     parser.add_argument('--g_num', type=int, default=5)
@@ -32,7 +32,7 @@ def get_parameters():
     #steps 
     parser.add_argument('--log_step', type=int, default=100)
     parser.add_argument('--sample_step', type=int, default=500)
-    parser.add_argument('--model_save_step', type=int, default=10000)
+    parser.add_argument('--model_save_step', type=int, default=20000)
     parser.add_argument('--sigma-update-step', type=int, default=100)
     parser.add_argument('--sigma-update-delta', type=float, default=0.005)
     parser.add_argument('--accum-step', type = float, default=4)

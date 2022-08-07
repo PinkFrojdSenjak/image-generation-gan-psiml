@@ -6,7 +6,10 @@ from typing import Optional
 import torch
 import torch.nn as nn
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-
+from typing import Callable
+import collections
+from itertools import repeat
+import warnings
 
 _autowrap_functions = set()
 
@@ -352,7 +355,7 @@ class SwinTransformerBlock(nn.Module):
     def forward(self, x):
         H, W = self.input_resolution
         B, L, C = x.shape
-        _assert(L == H * W, "input feature has wrong size")
+        assert L == H * W, "input feature has wrong size"
 
         shortcut = x
         x = self.norm1(x)
@@ -413,8 +416,8 @@ class PatchMerging(nn.Module):
         """
         H, W = self.input_resolution
         B, L, C = x.shape
-        _assert(L == H * W, "input feature has wrong size")
-        _assert(H % 2 == 0 and W % 2 == 0, f"x size ({H}*{W}) are not even.")
+        assert L == H * W, "input feature has wrong size"
+        assert H % 2 == 0 and W % 2 == 0, f"x size ({H}*{W}) are not even."
 
         x = x.view(B, H, W, C)
 
