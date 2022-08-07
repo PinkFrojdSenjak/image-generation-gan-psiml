@@ -356,11 +356,11 @@ class SwinGenerator(nn.Module):
             # state size. (ngf*2) x 32 x 32
             nn.ConvTranspose2d( ngf * 2, 32, 4, 2, 1, bias=False),
             # state size. 32 x 64 x 64
-            nn.ConvTranspose2d( 16, 16, 4, 2, 1, bias=False)
+            nn.ConvTranspose2d( 32, 16, 4, 2, 1, bias=False)
             # state size. 16 x 128 x 128
         )
 
-        self.patch_emb = PatchEmbed(img_size=128, patch_size=4, in_chans=3, embed_dim=embed_dim, flatten=True)
+        self.patch_emb = PatchEmbed(img_size=128, patch_size=4, in_chans=16, embed_dim=embed_dim, flatten=True)
         self.swin_block = BasicLayer(dim=embed_dim, out_dim=embed_dim, depth=2, num_heads=6, window_size=8, input_resolution=(32, 32), downsample=None)
         self.final = nn.Sequential(
         nn.ConvTranspose2d(embed_dim, embed_dim // 2, 4, 2, 1, bias=False),

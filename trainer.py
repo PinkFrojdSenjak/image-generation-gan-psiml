@@ -86,7 +86,7 @@ class Trainer(object):
 
     def build_model(self):
 
-        self.G = SwinGenerator(embed_dim=16, init_weights=True)#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
+        self.G = SwinGenerator(embed_dim=96, init_weights=True)#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
         self.G.to(self.device)
 
         self.D = DCDiscriminator()#(pretrained_pgan=self.pretrained_pgan, use_gpu = self.use_gpu)
