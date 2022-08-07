@@ -331,7 +331,7 @@ class DCSADiscriminator(nn.Module):
 
 
 class SwinGenerator(nn.Module):
-    def __init__(self, z_dim = 512, ngf = 64, embed_dim = 96) -> None:
+    def __init__(self, z_dim = 512, ngf = 64, embed_dim = 96, init_weights = False) -> None:
         super().__init__()
 
         self.z_dim = z_dim
@@ -354,10 +354,10 @@ class SwinGenerator(nn.Module):
             nn.BatchNorm2d(ngf * 2),
             nn.ReLU(True),
             # state size. (ngf*2) x 32 x 32
-            nn.ConvTranspose2d( ngf * 2, 16, 4, 2, 1, bias=False),
-            # state size. 16 x 64 x 64
-            nn.ConvTranspose2d( 16, 3, 4, 2, 1, bias=False)
-            # state size. 3 x 128 x 128
+            nn.ConvTranspose2d( ngf * 2, 32, 4, 2, 1, bias=False),
+            # state size. 32 x 64 x 64
+            nn.ConvTranspose2d( 16, 16, 4, 2, 1, bias=False)
+            # state size. 16 x 128 x 128
         )
 
         self.patch_emb = PatchEmbed(img_size=128, patch_size=4, in_chans=3, embed_dim=embed_dim, flatten=True)
@@ -368,6 +368,26 @@ class SwinGenerator(nn.Module):
             nn.ReLU(True),
         nn.ConvTranspose2d(embed_dim // 2, 3, 4, 2, 1, bias=False)
         )
+
+        if init_weights:
+            self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=1.0)
+            if module.bias is not None:
+                module.bias.data.zero_()
+
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=1.0)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+
+
 
     def forward(self, z):
         z = z.view(z.size(0), z.size(1), 1, 1)
