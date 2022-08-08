@@ -15,3 +15,5 @@ models
 *.log
 wandb
 kernels
+psiml_data
+psiml_data_cropped

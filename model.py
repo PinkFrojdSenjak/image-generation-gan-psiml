@@ -336,7 +336,7 @@ class SwinGenerator(nn.Module):
 
         self.z_dim = z_dim
         self.ngf = ngf
-        self.main = nn.Sequential(
+        self.first_scale = nn.Sequential(
             # input is Z, going into a convolution
             nn.ConvTranspose2d( z_dim, ngf * 16, 4, 1, 0, bias=False),
             nn.BatchNorm2d(ngf * 16),
@@ -356,12 +356,27 @@ class SwinGenerator(nn.Module):
             # state size. (ngf*2) x 32 x 32
             nn.ConvTranspose2d( ngf * 2, 32, 4, 2, 1, bias=False),
             # state size. 32 x 64 x 64
-            nn.ConvTranspose2d( 32, 16, 4, 2, 1, bias=False)
+            #nn.ConvTranspose2d( 32, 16, 4, 2, 1, bias=False)
             # state size. 16 x 128 x 128
         )
 
-        self.patch_emb = PatchEmbed(img_size=128, patch_size=4, in_chans=16, embed_dim=embed_dim, flatten=True)
-        self.swin_block = BasicLayer(dim=embed_dim, out_dim=embed_dim, depth=2, num_heads=6, window_size=8, input_resolution=(32, 32), downsample=None)
+        self.patch_emb_1 = PatchEmbed(img_size=64, patch_size=4, in_chans=32, embed_dim=embed_dim, flatten=True)
+        self.swin_block_1 = BasicLayer(dim=embed_dim, out_dim=embed_dim, depth=2, num_heads=6, window_size=8, input_resolution=(16, 16), downsample=None)
+        self.second_scale = nn.Sequential( 
+            nn.ConvTranspose2d(embed_dim, embed_dim // 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(embed_dim //2),
+                nn.ReLU(True),
+            nn.ConvTranspose2d(embed_dim // 2, 32, 4, 2, 1, bias=False),
+            nn.ReLU(True),
+            nn.BatchNorm2d(32),
+            nn.ConvTranspose2d(32, 16, 4, 2, 1, bias=False),
+            nn.ReLU(True),
+            nn.BatchNorm2d(16)
+        )
+
+        self.patch_emb_2 = PatchEmbed(img_size=128, patch_size=4, in_chans=16, embed_dim=embed_dim, flatten=True)
+        self.swin_block_2 = BasicLayer(dim=embed_dim, out_dim=embed_dim, depth=2, num_heads=6, window_size=8, input_resolution=(32, 32), downsample=None)
+
         self.final = nn.Sequential(
         nn.ConvTranspose2d(embed_dim, embed_dim // 2, 4, 2, 1, bias=False),
         nn.BatchNorm2d(embed_dim // 2),
@@ -369,32 +384,18 @@ class SwinGenerator(nn.Module):
         nn.ConvTranspose2d(embed_dim // 2, 3, 4, 2, 1, bias=False)
         )
 
-        if init_weights:
-            self.apply(self._init_weights)
-
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=1.0)
-            if module.bias is not None:
-                module.bias.data.zero_()
-
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=1.0)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
-
 
 
     def forward(self, z):
         z = z.view(z.size(0), z.size(1), 1, 1)
-        x = self.main(z)
-        x = self.patch_emb(x)
-        x = self.swin_block(x)
-        x = x.permute(0,2,1).view(x.size(0), -1,32, 32)
+        x = self.first_scale(z)
+        x = self.patch_emb_1(x)
+        x = self.swin_block_1(x)
+        x = x.permute(0,2,1).view(x.size(0), -1, 16, 16)
+        x = self.second_scale(x)
+        x = self.patch_emb_2(x)
+        x = self.swin_block_2(x)
+        x = x.permute(0,2,1).view(x.size(0), -1, 32, 32)
         x = self.final(x)
         return x
 

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import os
 import imageio
-
+import cv2
 
 def pil_loader(path):
     imgExt = os.path.splitext(path)[1]
@@ -17,12 +17,12 @@ def pil_loader(path):
         return img.convert('RGB')
 
 
-cx = 89
-cy = 121
+cx = 100
+cy = 130
 
-input_path = 'img_align_celeba/' 
+input_path = 'psiml_data/' 
 
-output_path = 'img_celeba_cropped/'
+output_path = 'psiml_data_cropped/'
 if not os.path.isdir(output_path):
         os.mkdir(output_path)
 
@@ -34,9 +34,13 @@ img_list = [f for f in os.listdir(
 for i, curr_path in enumerate(img_list):
     path = os.path.join(input_path, curr_path)
     img = np.array(pil_loader(path))
+    h, w, c = img.shape
+    img = img[:min(h, w) - 1, :min(h, w) - 1, :]
+    # resize to 256x256
+    img = cv2.resize(img, (256, 256))
     img = img[cy - 64: cy + 64, cx - 64: cx + 64]
     save_path = os.path.join(output_path, curr_path)
     imageio.imwrite(save_path, img)
-    if i % 100 == 0:
+    if i % 20 == 0:
         print(i, '/', len(img_list))
 
